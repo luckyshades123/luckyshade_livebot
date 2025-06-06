@@ -26,7 +26,7 @@ async def handle_period(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mode = user_modes.get(user_id, "Win Go 1Min")
     full_period, result_data = fetch_latest_result(mode, short_period)
     prediction = generate_prediction(result_data)
-    await update.message.reply_text(
+    await update.message.reply_text("
         f"🧾 Result for Period {full_period}:
 "
         f"Number: {result_data['number']}
