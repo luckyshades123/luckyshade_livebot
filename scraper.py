@@ -1,10 +1,8 @@
-
-     # scraper.py
-
+# scraper.py
 from playwright.sync_api import sync_playwright
 import time
 
-def get_latest_result():
+def get_latest_results(limit=10):
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -15,23 +13,33 @@ def get_latest_result():
             page.fill('input[placeholder="Enter Username"]', "3089134")
             page.fill('input[placeholder="Enter Password"]', "freefire123")
             page.click("button:has-text('Login')")
-            page.wait_for_timeout(3000)  # Wait for login to complete
+            page.wait_for_timeout(3000)
 
-            # Navigate to result page
+            # Navigate to game record
             page.goto("https://www.kwgin7.com/#/gameRecord")
             page.wait_for_timeout(3000)
 
-            # Extract latest result (this selector may need tweaking)
-            full_period = page.locator(".period-number-selector").first.text_content().strip()
-            number_text = page.locator(".result-number-selector").first.text_content().strip()
+            periods = page.locator(".van-row .van-col span.text-center")
+            numbers = page.locator(".van-row .lottery-history span:nth-child(2)")
 
-            number = int(number_text)
-            color = "🟥 Red" if number in [3, 6, 9] else "🟩 Green" if number in [1, 4, 7] else "🟪 Violet"
-            size = "Big" if number >= 5 else "Small"
+            full_periods = [periods.nth(i).text_content().strip() for i in range(limit)]
+            number_values = [int(numbers.nth(i).text_content().strip()) for i in range(limit)]
+
+            results = []
+            for i in range(len(full_periods)):
+                num = number_values[i]
+                color = "🟥 Red" if num in [3, 6, 9] else "🟩 Green" if num in [1, 4, 7] else "🟪 Violet"
+                size = "Big" if num >= 5 else "Small"
+                results.append({
+                    "period": full_periods[i],
+                    "number": num,
+                    "color": color,
+                    "size": size
+                })
 
             browser.close()
-            return full_period, (number, color, size)
+            return results
 
     except Exception as e:
-        print(f"Error in scraper: {e}")
-        return None, None   
+        print(f"Scraper error: {e}")
+        return []
