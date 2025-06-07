@@ -1,6 +1,7 @@
 scraper.py
 
-from playwright.sync_api import sync_playwright import time
+from playwright.sync_api import sync_playwright 
+import time
 
 def get_latest_result(): try: with sync_playwright() as p: browser = p.chromium.launch(headless=True) page = browser.new_page() page.goto("https://www.kwgin7.com/#/login")
 
