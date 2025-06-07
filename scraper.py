@@ -1,40 +1,37 @@
-scraper.py
 
-from playwright.sync_api import sync_playwright 
+     # scraper.py
+
+from playwright.sync_api import sync_playwright
 import time
 
-def get_latest_result(): try: with sync_playwright() as p: browser = p.chromium.launch(headless=True) page = browser.new_page() page.goto("https://www.kwgin7.com/#/login")
+def get_latest_result():
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            page.goto("https://www.kwgin7.com/#/login")
 
-# Login with credentials
-        page.fill("input[placeholder='Please enter account']", "3089134")
-        page.fill("input[placeholder='Please enter password']", "freefire123")
-        page.click("button:has-text('Login')")
+            # Login
+            page.fill('input[placeholder="Enter Username"]', "3089134")
+            page.fill('input[placeholder="Enter Password"]', "freefire123")
+            page.click("button:has-text('Login')")
+            page.wait_for_timeout(3000)  # Wait for login to complete
 
-        page.wait_for_timeout(3000)
-        page.goto("https://www.kwgin7.com/#/lottery")
-        page.wait_for_timeout(4000)
+            # Navigate to result page
+            page.goto("https://www.kwgin7.com/#/gameRecord")
+            page.wait_for_timeout(3000)
 
-        # Read latest result (example structure — adjust if needed)
-        period = page.query_selector(".game_num span").inner_text()
-        last_number_el = page.query_selector(".open-num span:last-child")
-        number = int(last_number_el.inner_text()) if last_number_el else None
+            # Extract latest result (this selector may need tweaking)
+            full_period = page.locator(".period-number-selector").first.text_content().strip()
+            number_text = page.locator(".result-number-selector").first.text_content().strip()
 
-        # Determine color
-        if number in [0, 5]:
-            color = "🟪 Violet"
-        elif number in [1, 3, 7, 9]:
-            color = "🟩 Green"
-        elif number in [2, 4, 6, 8]:
-            color = "🟥 Red"
-        else:
-            color = "Unknown"
+            number = int(number_text)
+            color = "🟥 Red" if number in [3, 6, 9] else "🟩 Green" if number in [1, 4, 7] else "🟪 Violet"
+            size = "Big" if number >= 5 else "Small"
 
-        size = "Big" if number >= 5 else "Small"
-        browser.close()
+            browser.close()
+            return full_period, (number, color, size)
 
-        return period, (number, color, size)
-
-except Exception as e:
-    print(f"[Scraper Error] {e}")
-    return None, None
-
+    except Exception as e:
+        print(f"Error in scraper: {e}")
+        return None, None   
