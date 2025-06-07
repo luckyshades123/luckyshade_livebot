@@ -4,7 +4,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, Con
 from scraper import get_latest_result
 from predictor import predict_next
 
-BOT_TOKEN = "YOUR_REAL_TELEGRAM_BOT_TOKEN"
+BOT_TOKEN = "8176352759:AAGbbaNC7zSlzQHcM1yZny1XuL9ye-LCKSg"
 
 CHOOSING_PERIOD = 1
 
