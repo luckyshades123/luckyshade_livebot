@@ -14,7 +14,7 @@ def keep_port_alive():
 
 threading.Thread(target=keep_port_alive).start()
 
-BOT_TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'  # Replace with your actual token
+BOT_TOKEN = '8176352759:AAGbbaNC7zSlzQHcM1yZny1XuL9ye-LCKSg'  # Replace with your actual token
 
 CHOOSING_PERIOD = 1
 
