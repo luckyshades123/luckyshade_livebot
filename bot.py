@@ -7,8 +7,15 @@ from telegram.ext import (
 from scraper import get_latest_result
 from predictor import predict_next
 import os
+import logging
 
-# ✅ Your Telegram Bot Token
+# ✅ Enable logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
+
+# ✅ Your bot token
 BOT_TOKEN = '8176352759:AAGbbaNC7zSlzQHcM1yZny1XuL9ye-LCKSg'
 
 CHOOSING_PERIOD = 1
@@ -66,14 +73,16 @@ def main():
 
     prediction_flow = ConversationHandler(
         entry_points=[CommandHandler("predict", predict)],
-        states={CHOOSING_PERIOD: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_period)]},
+        states={
+            CHOOSING_PERIOD: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_period)]
+        },
         fallbacks=[]
     )
-    app.add_handler(prediction_flow)
-    app.run_polling()
 
-    
-    
+    app.add_handler(prediction_flow)
+
+    # ✅ Run with polling (REQUIRED for Render Free Plan, avoids webhook)
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
     main()
