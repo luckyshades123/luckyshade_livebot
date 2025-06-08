@@ -70,6 +70,7 @@ def main():
         fallbacks=[]
     )
     app.add_handler(prediction_flow)
+    app.run_polling()
 
     # ✅ Webhook for Render
     PORT = int(os.environ.get("PORT", 8443))
