@@ -16,7 +16,7 @@ logging.basicConfig(
 )
 
 # ✅ Your bot token
-BOT_TOKEN = '8176352759:AAGbbaNC7zSlzQHcM1yZny1XuL9ye-LCKSg'
+BOT_TOKEN = '8176352759:AAEnydSxZGReXUBjDE85SE1XKUaO-NWFreM'
 
 CHOOSING_PERIOD = 1
 
