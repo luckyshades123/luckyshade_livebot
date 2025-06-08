@@ -72,14 +72,7 @@ def main():
     app.add_handler(prediction_flow)
     app.run_polling()
 
-    # ✅ Webhook for Render
-    PORT = int(os.environ.get("PORT", 8443))
-    WEBHOOK_URL = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}/"
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=BOT_TOKEN,
-        webhook_url=WEBHOOK_URL + BOT_TOKEN
+    # 
     )
 
 if __name__ == '__main__':
