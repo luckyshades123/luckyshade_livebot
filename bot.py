@@ -16,8 +16,7 @@ logging.basicConfig(
 )
 
 # ✅ Your bot token
-BOT_TOKEN = '8176352759:AAEnydSxZGReXUBjDE85SE1XKUaO-NWFreM'
-
+BOT_TOKEN = '8176352759:AAG96y16wUG4x3YgQsnf0JH81L5vg48gwbI'
 CHOOSING_PERIOD = 1
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
