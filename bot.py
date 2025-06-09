@@ -6,32 +6,37 @@ from telegram.ext import (
 )
 from scraper import get_latest_result
 from predictor import predict_next
-import logging, os, asyncio
+import logging, os
 
-# Enable logging
+# ✅ Enable logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
 
+# ✅ Your bot token
 BOT_TOKEN = '8176352759:AAG96y16wUG4x3YgQsnf0JH81L5vg48gwbI'
+
+# ✅ Conversation states
 CHOOSING_MODE, CHOOSING_PERIOD = range(2)
+
+# ✅ Store user-selected game mode
 user_modes = {}
 
-# /start command
+# ✅ /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Welcome to LuckyShade Real-Time Prediction Bot!\n"
         "Use /predict to start.\nSupports: Win Go 1Min and 3Min."
     )
 
-# /predict command
+# ✅ /predict command
 async def predict(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = ReplyKeyboardMarkup([["1Min", "3Min"]], one_time_keyboard=True, resize_keyboard=True)
     await update.message.reply_text("🎮 Choose game mode:", reply_markup=reply_markup)
     return CHOOSING_MODE
 
-# Handle game mode
+# ✅ Handle mode choice
 async def choose_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mode = update.message.text.strip()
     if mode not in ["1Min", "3Min"]:
@@ -42,12 +47,12 @@ async def choose_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("📌 Now enter the last 3 digits of the Period Number:")
     return CHOOSING_PERIOD
 
-# Handle period
+# ✅ Handle period number input
 async def handle_period(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     mode = user_modes.get(user_id, "1Min")
-    last_digits = update.message.text.strip()
 
+    last_digits = update.message.text.strip()
     if not last_digits.isdigit() or len(last_digits) != 3:
         await update.message.reply_text("❌ Enter exactly 3 digits (e.g., 789).")
         return CHOOSING_PERIOD
@@ -76,14 +81,13 @@ async def handle_period(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     return ConversationHandler.END
 
-# ✅ Main (No asyncio.run)
-async def main():
-    await Bot(token=BOT_TOKEN).delete_webhook(drop_pending_updates=True)
-
+# ✅ MAIN: Polling-based (Render-compatible)
+def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
+
     app.add_handler(CommandHandler("start", start))
 
-    conv = ConversationHandler(
+    conv_handler = ConversationHandler(
         entry_points=[CommandHandler("predict", predict)],
         states={
             CHOOSING_MODE: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_mode)],
@@ -92,18 +96,10 @@ async def main():
         fallbacks=[]
     )
 
-    app.add_handler(conv)
+    app.add_handler(conv_handler)
 
-    await app.initialize()
-    await app.start()
-    await app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+    # ✅ Use polling only, no webhooks, no asyncio.run
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
 
-# 🟩 Entry Point
 if __name__ == '__main__':
-    try:
-        asyncio.get_event_loop().run_until_complete(main())
-    except RuntimeError:
-        # Fallback for "event loop already running"
-        loop = asyncio.get_event_loop()
-        loop.create_task(main())
-        loop.run_forever()
+    main()
