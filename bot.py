@@ -83,7 +83,7 @@ async def handle_period(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     return ConversationHandler.END
 
-# ✅ Safe main() for polling on Render (no port binding)
+# ✅ Safe and correct main() with asyncio
 def main():
     async def run():
         await Bot(token=BOT_TOKEN).delete_webhook(drop_pending_updates=True)
@@ -102,7 +102,6 @@ def main():
 
         app.add_handler(prediction_conv)
 
-        # ✅ Render-safe polling
         await app.run_polling(allowed_updates=Update.ALL_TYPES)
 
     asyncio.run(run())
