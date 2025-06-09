@@ -1,16 +1,12 @@
-# predictor.py
-
-import asyncio
-from scraper import get_latest_results
 from collections import Counter
+from scraper import get_latest_results
 
-def predict_next(mode="1Min"):
+async def predict_next(mode="1Min"):
     """
     Predict next result based on trend analysis of the last 10 results.
     """
     try:
-        # Run async scraper inside sync predictor
-        data = asyncio.run(get_latest_results(limit=10, mode=mode))
+        data = await get_latest_results(limit=10, mode=mode)
 
         if len(data) < 5:
             return {"skip": True}, 0
