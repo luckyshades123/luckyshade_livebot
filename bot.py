@@ -27,28 +27,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # /predict command
 async def predict(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [["1Min", "3Min"]]
-    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+    reply_markup = ReplyKeyboardMarkup([["1Min", "3Min"]], one_time_keyboard=True, resize_keyboard=True)
     await update.message.reply_text("🎮 Choose game mode:", reply_markup=reply_markup)
     return CHOOSING_MODE
 
-# Handle mode selection
+# Handle game mode
 async def choose_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mode = update.message.text.strip()
     if mode not in ["1Min", "3Min"]:
-        await update.message.reply_text("❌ Please choose either '1Min' or '3Min'.")
+        await update.message.reply_text("❌ Choose either '1Min' or '3Min'.")
         return CHOOSING_MODE
 
     user_modes[update.effective_user.id] = mode
     await update.message.reply_text("📌 Now enter the last 3 digits of the Period Number:")
     return CHOOSING_PERIOD
 
-# Handle period input and return result + prediction
+# Handle period
 async def handle_period(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     mode = user_modes.get(user_id, "1Min")
-
     last_digits = update.message.text.strip()
+
     if not last_digits.isdigit() or len(last_digits) != 3:
         await update.message.reply_text("❌ Enter exactly 3 digits (e.g., 789).")
         return CHOOSING_PERIOD
@@ -77,29 +76,34 @@ async def handle_period(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     return ConversationHandler.END
 
-# Main entry point
-def main():
-    async def run():
-        await Bot(token=BOT_TOKEN).delete_webhook(drop_pending_updates=True)
+# ✅ Main (No asyncio.run)
+async def main():
+    await Bot(token=BOT_TOKEN).delete_webhook(drop_pending_updates=True)
 
-        app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
 
-        app.add_handler(CommandHandler("start", start))
+    conv = ConversationHandler(
+        entry_points=[CommandHandler("predict", predict)],
+        states={
+            CHOOSING_MODE: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_mode)],
+            CHOOSING_PERIOD: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_period)],
+        },
+        fallbacks=[]
+    )
 
-        conv = ConversationHandler(
-            entry_points=[CommandHandler("predict", predict)],
-            states={
-                CHOOSING_MODE: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_mode)],
-                CHOOSING_PERIOD: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_period)],
-            },
-            fallbacks=[]
-        )
+    app.add_handler(conv)
 
-        app.add_handler(conv)
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
 
-        await app.run_polling(allowed_updates=Update.ALL_TYPES)
-
-    asyncio.run(run())
-
+# 🟩 Entry Point
 if __name__ == '__main__':
-    main()
+    try:
+        asyncio.get_event_loop().run_until_complete(main())
+    except RuntimeError:
+        # Fallback for "event loop already running"
+        loop = asyncio.get_event_loop()
+        loop.create_task(main())
+        loop.run_forever()
