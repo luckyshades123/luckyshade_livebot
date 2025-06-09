@@ -8,31 +8,31 @@ from scraper import get_latest_result
 from predictor import predict_next
 import logging, os, asyncio
 
-# ✅ Enable logging
+# Enable logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
 
 BOT_TOKEN = '8176352759:AAG96y16wUG4x3YgQsnf0JH81L5vg48gwbI'
-
 CHOOSING_MODE, CHOOSING_PERIOD = range(2)
 user_modes = {}
 
-# ✅ /start command
+# /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Welcome to LuckyShade Real-Time Prediction Bot!\n"
         "Use /predict to start.\nSupports: Win Go 1Min and 3Min."
     )
 
-# ✅ /predict command
+# /predict command
 async def predict(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    reply_markup = ReplyKeyboardMarkup([["1Min", "3Min"]], one_time_keyboard=True, resize_keyboard=True)
+    keyboard = [["1Min", "3Min"]]
+    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
     await update.message.reply_text("🎮 Choose game mode:", reply_markup=reply_markup)
     return CHOOSING_MODE
 
-# ✅ Handle game mode choice
+# Handle mode selection
 async def choose_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mode = update.message.text.strip()
     if mode not in ["1Min", "3Min"]:
@@ -43,7 +43,7 @@ async def choose_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("📌 Now enter the last 3 digits of the Period Number:")
     return CHOOSING_PERIOD
 
-# ✅ Handle period number
+# Handle period input and return result + prediction
 async def handle_period(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     mode = user_modes.get(user_id, "1Min")
@@ -77,29 +77,29 @@ async def handle_period(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     return ConversationHandler.END
 
-# ✅ Safe polling-based main() function (no port binding required)
+# Main entry point
 def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("predict", predict)],
-        states={
-            CHOOSING_MODE: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_mode)],
-            CHOOSING_PERIOD: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_period)],
-        },
-        fallbacks=[]
-    )
-    app.add_handler(conv_handler)
-
-    async def startup():
+    async def run():
         await Bot(token=BOT_TOKEN).delete_webhook(drop_pending_updates=True)
-        await app.initialize()
-        await app.start()
-        await app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
 
-    asyncio.get_event_loop().run_until_complete(startup())
+        app = ApplicationBuilder().token(BOT_TOKEN).build()
+
+        app.add_handler(CommandHandler("start", start))
+
+        conv = ConversationHandler(
+            entry_points=[CommandHandler("predict", predict)],
+            states={
+                CHOOSING_MODE: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_mode)],
+                CHOOSING_PERIOD: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_period)],
+            },
+            fallbacks=[]
+        )
+
+        app.add_handler(conv)
+
+        await app.run_polling(allowed_updates=Update.ALL_TYPES)
+
+    asyncio.run(run())
 
 if __name__ == '__main__':
     main()
