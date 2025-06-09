@@ -46,7 +46,7 @@ async def get_latest_result(mode="1Min"):
         return None, None
 
 
-async def get_latest_results(limit=10, mode="1Min"):
+async def get_latest_results(limit=20, mode="1Min"):
     """
     Return a list of last `limit` results for prediction analysis.
     Format: [{'number': x, 'color': y, 'size': z}, ...]
