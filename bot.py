@@ -1,84 +1,105 @@
-bot.py
+# bot.py
 
-from telegram import Update, ReplyKeyboardMarkup, Bot from telegram.ext import ( ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters, ConversationHandler ) from scraper import get_latest_result from predictor import predict_next import logging, os, asyncio
+from telegram import Update, ReplyKeyboardMarkup, Bot
+from telegram.ext import (
+    ApplicationBuilder, CommandHandler,
+    MessageHandler, ContextTypes, filters,
+    ConversationHandler
+)
+from scraper import get_latest_result
+from predictor import predict_next
+import logging, os, asyncio
 
-Enable logging
+# ✅ Enable logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
 
-logging.basicConfig( format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO )
+BOT_TOKEN = '8176352759:AAG96y16wUG4x3YgQsnf0JH81L5vg48gwbI'  # Replace with your actual bot token
 
-BOT_TOKEN = '8176352759:AAG96y16wUG4x3YgQsnf0JH81L5vg48gwbI'
+CHOOSING_MODE, CHOOSING_PERIOD = range(2)
+user_modes = {}
 
-CHOOSING_MODE, CHOOSING_PERIOD = range(2) user_modes = {}
+# ✅ /start command
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "👋 Welcome to LuckyShade Real-Time Prediction Bot!\n"
+        "Use /predict to begin.\nSupports: Win Go 1Min and 3Min modes."
+    )
 
-/start
+# ✅ /predict command
+async def predict(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    reply_markup = ReplyKeyboardMarkup([["1Min", "3Min"]], one_time_keyboard=True, resize_keyboard=True)
+    await update.message.reply_text("🎮 Choose game mode:", reply_markup=reply_markup)
+    return CHOOSING_MODE
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE): await update.message.reply_text( "\U0001F44B Welcome to LuckyShade Real-Time Prediction Bot!\n" "Use /predict to start.\nSupports: Win Go 1Min and 3Min." )
+# ✅ Handle game mode selection
+async def choose_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    mode = update.message.text.strip()
+    if mode not in ["1Min", "3Min"]:
+        await update.message.reply_text("❌ Choose either '1Min' or '3Min'.")
+        return CHOOSING_MODE
 
-/predict
-
-async def predict(update: Update, context: ContextTypes.DEFAULT_TYPE): reply_markup = ReplyKeyboardMarkup([['1Min', '3Min']], one_time_keyboard=True, resize_keyboard=True) await update.message.reply_text("\U0001F3AE Choose game mode:", reply_markup=reply_markup) return CHOOSING_MODE
-
-Game mode selection
-
-async def choose_mode(update: Update, context: ContextTypes.DEFAULT_TYPE): mode = update.message.text.strip() if mode not in ['1Min', '3Min']: await update.message.reply_text("\u274C Choose either '1Min' or '3Min'.") return CHOOSING_MODE
-
-user_modes[update.effective_user.id] = mode
-await update.message.reply_text("\U0001F4CC Now enter the last 3 digits of the Period Number:")
-return CHOOSING_PERIOD
-
-Handle period input
-
-async def handle_period(update: Update, context: ContextTypes.DEFAULT_TYPE): user_id = update.effective_user.id mode = user_modes.get(user_id, "1Min")
-
-last_digits = update.message.text.strip()
-if not last_digits.isdigit() or len(last_digits) != 3:
-    await update.message.reply_text("\u274C Enter exactly 3 digits (e.g., 678).")
+    user_modes[update.effective_user.id] = mode
+    await update.message.reply_text("📌 Now enter the last 3 digits of the Period Number:")
     return CHOOSING_PERIOD
 
-full_period, result = await get_latest_result(mode=mode)
-if not full_period or not result:
-    await update.message.reply_text("\u26A0\uFE0F Could not fetch result. Try again.")
+# ✅ Handle period number entry
+async def handle_period(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    mode = user_modes.get(user_id, "1Min")
+
+    last_digits = update.message.text.strip()
+    if not last_digits.isdigit() or len(last_digits) != 3:
+        await update.message.reply_text("❌ Enter exactly 3 digits (e.g., 789).")
+        return CHOOSING_PERIOD
+
+    full_period, result = await get_latest_result(mode=mode)
+    if not full_period or not result:
+        await update.message.reply_text("⚠️ Could not fetch result. Try again.")
+        return ConversationHandler.END
+
+    if not full_period.endswith(last_digits):
+        await update.message.reply_text("❌ Period mismatch. Try again.")
+        return ConversationHandler.END
+
+    prediction, confidence = predict_next(mode=mode)
+    number, color, size = result
+
+    if prediction.get("skip"):
+        await update.message.reply_text(f"⚠️ Skip: {full_period[-3:]} (Low Confidence)")
+    else:
+        await update.message.reply_text(
+            f"🧾 Period: {full_period}\n"
+            f"Number: {number}\n🎨 Color: {color}\n⚖ Size: {size}\n\n"
+            f"🔮 Prediction:\n{prediction['color']}\n{prediction['size']}\n{prediction['number']}\n\n"
+            f"📊 Confidence: {confidence}%"
+        )
+
     return ConversationHandler.END
 
-if not full_period.endswith(last_digits):
-    await update.message.reply_text("\u274C Period mismatch. Try again.")
-    return ConversationHandler.END
+# ✅ Safe polling main() for Render
+def main():
+    async def run():
+        await Bot(token=BOT_TOKEN).delete_webhook(drop_pending_updates=True)
 
-prediction, confidence = await predict_next(mode=mode)
-number, color, size = result
+        app = ApplicationBuilder().token(BOT_TOKEN).build()
+        app.add_handler(CommandHandler("start", start))
 
-if prediction.get("skip"):
-    await update.message.reply_text(f"\u26A0\uFE0F Skip: {full_period[-3:]} (Low Confidence)")
-else:
-    await update.message.reply_text(
-        f"\U0001F9FE Period: {full_period}\n"
-        f"Number: {number}\n\U0001F3A8 Color: {color}\n\u2696 Size: {size}\n\n"
-        f"\U0001F52E Prediction:\n{prediction['color']}\n{prediction['size']}\n{prediction['number']}\n\n"
-        f"\U0001F4CA Confidence: {confidence}%"
-    )
+        prediction_conv = ConversationHandler(
+            entry_points=[CommandHandler("predict", predict)],
+            states={
+                CHOOSING_MODE: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_mode)],
+                CHOOSING_PERIOD: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_period)],
+            },
+            fallbacks=[]
+        )
 
-return ConversationHandler.END
+        app.add_handler(prediction_conv)
+        await app.run_polling(allowed_updates=Update.ALL_TYPES)
 
-Safe polling main
+    asyncio.run(run())
 
-def main(): async def run(): await Bot(token=BOT_TOKEN).delete_webhook(drop_pending_updates=True)
-
-app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("predict", predict)],
-        states={
-            CHOOSING_MODE: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_mode)],
-            CHOOSING_PERIOD: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_period)],
-        },
-        fallbacks=[]
-    )
-
-    app.add_handler(conv_handler)
-    await app.run_polling(allowed_updates=Update.ALL_TYPES)
-
-asyncio.run(run())
-
-if name == 'main': main()
-
+if __name__ == '__main__':
+    main()
