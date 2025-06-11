@@ -1,5 +1,3 @@
-# bot.py
-
 from telegram import Update, ReplyKeyboardMarkup, Bot
 from telegram.ext import (
     ApplicationBuilder, CommandHandler,
@@ -10,7 +8,7 @@ from scraper import get_latest_result
 from predictor import predict_next
 import logging, os, asyncio, nest_asyncio, socket, threading, time
 
-# ✅ Fake port listener for Render Free Plan
+# ✅ Keep fake port alive for Render free dyno
 def keep_port_alive():
     s = socket.socket()
     s.bind(("0.0.0.0", int(os.environ.get("PORT", 10000))))
@@ -20,31 +18,33 @@ def keep_port_alive():
 
 threading.Thread(target=keep_port_alive, daemon=True).start()
 
-# ✅ Enable logging
+# ✅ Logging
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
 
+# ✅ Telegram Bot Token
 BOT_TOKEN = '8176352759:AAG96y16wUG4x3YgQsnf0JH81L5vg48gwbI'
 
+# ✅ Conversation states
 CHOOSING_MODE, CHOOSING_PERIOD = range(2)
 user_modes = {}
 
-# ✅ /start
+# ✅ /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Welcome to LuckyShade Real-Time Prediction Bot!\n"
         "Use /predict to start.\nSupports: Win Go 1Min and 3Min."
     )
 
-# ✅ /predict
+# ✅ /predict command
 async def predict(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = ReplyKeyboardMarkup([["1Min", "3Min"]], one_time_keyboard=True, resize_keyboard=True)
     await update.message.reply_text("🎮 Choose game mode:", reply_markup=reply_markup)
     return CHOOSING_MODE
 
-# ✅ Game mode selection
+# ✅ Mode selection
 async def choose_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mode = update.message.text.strip()
     if mode not in ["1Min", "3Min"]:
@@ -55,7 +55,7 @@ async def choose_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("📌 Now enter the last 3 digits of the Period Number:")
     return CHOOSING_PERIOD
 
-# ✅ Handle period input
+# ✅ Period handling
 async def handle_period(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     mode = user_modes.get(user_id, "1Min")
@@ -89,7 +89,7 @@ async def handle_period(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     return ConversationHandler.END
 
-# ✅ Safe Render-compatible polling entry
+# ✅ Render-compatible async polling loop
 async def run_bot():
     await Bot(token=BOT_TOKEN).delete_webhook(drop_pending_updates=True)
 
