@@ -8,7 +8,17 @@ from telegram.ext import (
 )
 from scraper import get_latest_result
 from predictor import predict_next
-import logging, os, asyncio, nest_asyncio
+import logging, os, asyncio, nest_asyncio, socket, threading, time
+
+# ✅ Fake port listener for Render Free Plan
+def keep_port_alive():
+    s = socket.socket()
+    s.bind(("0.0.0.0", int(os.environ.get("PORT", 10000))))
+    s.listen(1)
+    while True:
+        time.sleep(1000)
+
+threading.Thread(target=keep_port_alive, daemon=True).start()
 
 # ✅ Enable logging
 logging.basicConfig(
@@ -64,7 +74,7 @@ async def handle_period(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Period mismatch. Try again.")
         return ConversationHandler.END
 
-    prediction, confidence = predict_next(mode=mode)
+    prediction, confidence = await predict_next(mode=mode)
     number, color, size = result
 
     if prediction.get("skip"):
@@ -79,7 +89,7 @@ async def handle_period(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     return ConversationHandler.END
 
-# ✅ Safe Render-compatible async main()
+# ✅ Safe Render-compatible polling entry
 async def run_bot():
     await Bot(token=BOT_TOKEN).delete_webhook(drop_pending_updates=True)
 
@@ -96,11 +106,12 @@ async def run_bot():
     )
 
     app.add_handler(conv_handler)
+
     await app.initialize()
     await app.start()
     await app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
 
-# ✅ Entry point
+# ✅ Main
 if __name__ == '__main__':
     nest_asyncio.apply()
     asyncio.get_event_loop().run_until_complete(run_bot())
